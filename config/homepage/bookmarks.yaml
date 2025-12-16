@@ -1,0 +1,10 @@
+---
+- Resources:
+    - Servarr Wiki:
+        - abbr: Wiki
+          href: https://wiki.servarr.com/
+          icon: mdi-book-open-variant
+    - TRaSH Guides:
+        - abbr: TRaSH
+          href: https://trash-guides.info/
+          icon: mdi-school

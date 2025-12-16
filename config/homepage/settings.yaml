@@ -1,0 +1,35 @@
+---
+title: Media Hub
+headerStyle: clean
+theme: dark
+color: slate
+hideVersion: true
+target: _blank
+background:
+  image: /images/light_bulb_glowing-wallpaper-3840x2400.jpg
+  #saturate: 20
+  brightness: 50
+  opacity: 20
+backgroundColor: black
+
+layout:
+  Streaming:
+    style: row
+    columns: 2
+    icon: mdi-television-play
+  Content Management:
+    style: row
+    columns: 4
+    icon: mdi-library-shelves
+  Downloads & Indexers:
+    style: row
+    columns: 4
+    icon: mdi-download-circle
+  Tools:
+    style: row
+    columns: 2
+    icon: mdi-tools
+  Infrastructure:
+    style: row
+    columns: 5
+    icon: mdi-server-network

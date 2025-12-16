@@ -1,0 +1,419 @@
+services:
+  # Gluetun VPN - Routes arr stack + qBittorrent through ProtonVPN via WireGuard
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8080:8080"   # qBittorrent WebUI
+      - "9696:9696"   # Prowlarr
+      - "8989:8989"   # Sonarr
+      - "7878:7878"   # Radarr
+      - "8686:8686"   # Lidarr
+      - "6767:6767"   # Bazarr
+      - "8191:8191"   # flaresolverr
+      - "5299:5299"   # LazyLibrarian
+      - "5454:5454"   # Notifiarr
+      - "8085:8085"   # SABnzbd
+      - "5656:5656"   # Unpackerr
+
+    environment:
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=protonvpn
+      - PORT_FORWARD_ONLY=on
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - SERVER_COUNTRIES=Netherlands
+      - SERVER_CITIES=Amsterdam
+      - FIREWALL_VPN_INPUT_PORTS=${VPN_INPUT_PORTS:-}
+      - FIREWALL_INBOUND_SUBNETS=${FIREWALL_INBOUND_SUBNETS:-192.168.1.0/24,172.28.0.0/16}
+      - TZ=${TZ:-America/Chicago}
+      - HEALTH_VPN_DURATION_INITIAL=60s
+    volumes:
+      - ${CONFIG_ROOT}/gluetun:/gluetun
+      - gluetun_portforward:/tmp/gluetun
+    networks:
+      arr_network:
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # qBittorrent - Torrent client (through VPN)
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+      - WEBUI_PORT=8080
+      - WEBUI_ADDRESS=0.0.0.0
+      - QBITTORRENT_USER=${QBITTORRENT_USER:-admin}
+      - QBITTORRENT_PASS=${QBITTORRENT_PASS}
+    volumes:
+      - ${CONFIG_ROOT}/qbittorrent:/config
+      - ${MEDIA_ROOT}/downloads:/downloads
+      - gluetun_portforward:/tmp/gluetun:ro
+      - ./init-scripts/qbittorrent-port-sync.sh:/etc/services.d/qbittorrent-port-sync/run:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # SABnzbd - Usenet client (through VPN)
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+      - DOMAIN=${DOMAIN:-yourdomain.com}
+    volumes:
+      - ${CONFIG_ROOT}/sabnzbd:/config
+      - ${MEDIA_ROOT}/downloads:/downloads
+      - ${MEDIA_ROOT}/downloads/incomplete:/incomplete-downloads
+      - ./init-scripts/sabnzbd-port-fix.sh:/custom-cont-init.d/sabnzbd-port-fix.sh:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Unpackerr - Automatic archive extraction (through VPN)
+  unpackerr:
+    image: golift/unpackerr:latest
+    container_name: unpackerr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+      # Sonarr Integration
+      - UN_SONARR_0_URL=http://gluetun:8989
+      - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
+      - UN_SONARR_0_PATHS_0=/downloads
+      # Radarr Integration
+      - UN_RADARR_0_URL=http://gluetun:7878
+      - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
+      - UN_RADARR_0_PATHS_0=/downloads
+      # Lidarr Integration
+      - UN_LIDARR_0_URL=http://gluetun:8686
+      - UN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
+      - UN_LIDARR_0_PATHS_0=/downloads
+    volumes:
+      - ${CONFIG_ROOT}/unpackerr:/config
+      - ${MEDIA_ROOT}/downloads:/downloads
+      - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Prowlarr - Indexer manager (through VPN)
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/prowlarr:/config
+      - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Sonarr - TV Show management (through VPN)
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/sonarr:/config
+      - ${MEDIA_ROOT}/library/tv:/tv
+      - ${MEDIA_ROOT}/downloads:/downloads
+      - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Radarr - Movie management (through VPN)
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/radarr:/config
+      - ${MEDIA_ROOT}/library/movies:/movies
+      - ${MEDIA_ROOT}/downloads:/downloads
+      - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Lidarr - Music management (through VPN)
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/lidarr:/config
+      - ${MEDIA_ROOT}/library/music:/music
+      - ${MEDIA_ROOT}/downloads:/downloads
+      - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # LazyLibrarian - Ebook management (through VPN)
+  lazylibrarian:
+    image: lscr.io/linuxserver/lazylibrarian:latest
+    container_name: lazylibrarian
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/lazylibrarian:/config
+      - ${MEDIA_ROOT}/library/books:/books
+      - ${MEDIA_ROOT}/downloads:/downloads
+      - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Bazarr - Subtitle management (through VPN)
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/bazarr:/config
+      - ${MEDIA_ROOT}/library/movies:/movies
+      - ${MEDIA_ROOT}/library/tv:/tv
+      - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Flaresolverr - Cloudflare bypass (through VPN)
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=${TZ:-America/Chicago}
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+
+  # Notifiarr - Unified notification client
+  notifiarr:
+    image: golift/notifiarr:latest
+    container_name: notifiarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+      - DN_API_KEY=${NOTIFIARR_API_KEY}
+      # Sonarr Integration
+      - DN_SONARR_0_NAME=Sonarr
+      - DN_SONARR_0_URL=http://gluetun:8989
+      - DN_SONARR_0_API_KEY=${SONARR_API_KEY}
+      # Radarr Integration
+      - DN_RADARR_0_NAME=Radarr
+      - DN_RADARR_0_URL=http://gluetun:7878
+      - DN_RADARR_0_API_KEY=${RADARR_API_KEY}
+      # Lidarr Integration
+      - DN_LIDARR_0_NAME=Lidarr
+      - DN_LIDARR_0_URL=http://gluetun:8686
+      - DN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
+      # Prowlarr Integration
+      - DN_PROWLARR_0_NAME=Prowlarr
+      - DN_PROWLARR_0_URL=http://gluetun:9696
+      - DN_PROWLARR_0_API_KEY=${PROWLARR_API_KEY}
+      # qBittorrent Integration
+      - DN_QBIT_0_NAME=qBittorrent
+      - DN_QBIT_0_URL=http://gluetun:8080
+      - DN_QBIT_0_USER=${QBITTORRENT_USER:-admin}
+      - DN_QBIT_0_PASS=${QBITTORRENT_PASS}
+    volumes:
+      - ${CONFIG_ROOT}/notifiarr:/config
+      - /var/run/utmp:/var/run/utmp:ro
+      - ${CONFIG_ROOT}/notifiarr/machine-id:/etc/machine-id:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Jellyfin - Media server (direct connection, no VPN)
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/jellyfin:/config
+      - ${MEDIA_ROOT}/library/tv:/data/tvshows
+      - ${MEDIA_ROOT}/library/movies:/data/movies
+      - ${MEDIA_ROOT}/library/music:/data/music
+      - ${MEDIA_ROOT}/library/books:/data/books
+    ports:
+      - "${HOST_IP:-0.0.0.0}:8096:8096"
+      - "${HOST_IP:-0.0.0.0}:8920:8920"  # HTTPS
+      - "${HOST_IP:-0.0.0.0}:7359:7359/udp"  # Auto-discovery
+      - "${HOST_IP:-0.0.0.0}:1900:1900/udp"  # DLNA
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:           # <--- ONLY needed if you hit permission errors (see below)
+      - "107"
+    networks:
+      arr_network:
+    restart: unless-stopped
+
+  # Jellyseerr - Media request management (direct connection, no VPN)
+  jellyseerr:
+    image: ghcr.io/fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/jellyseerr:/app/config
+    ports:
+      - "${HOST_IP:-0.0.0.0}:5055:5055"
+    networks:
+      arr_network:
+    restart: unless-stopped
+
+  # Caddy - Reverse proxy for ALL services (arr + media)
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    container_name: caddy
+    environment:
+      - TZ=${TZ:-America/Chicago}
+      - DOMAIN=${DOMAIN:-yourdomain.com}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-your-email@example.com}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - ${CONFIG_ROOT}/caddy/data:/data
+      - ${CONFIG_ROOT}/caddy/config:/config
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    ports:
+      - "${HOST_IP:-0.0.0.0}:80:80"
+      - "${HOST_IP:-0.0.0.0}:443:443"
+    depends_on:
+      - gluetun
+      - jellyfin
+      - jellyseerr
+    networks:
+      arr_network:
+    restart: unless-stopped
+
+  # Homepage config init - Copies config files to persistent storage
+  homepage-init:
+    image: alpine:latest
+    container_name: homepage-init
+    command: >
+      sh -c "
+        echo 'Copying homepage config files...';
+        cp -rv /source/* /dest/ 2>/dev/null || echo 'Config files already exist or copy failed';
+        echo 'Homepage config files ready.';
+        exit 0
+      "
+    volumes:
+      - ./config/homepage:/source:ro
+      - ${CONFIG_ROOT}/homepage:/dest
+    restart: "no"
+
+  # Homepage - Dashboard for all services
+  homepage:
+    image: ghcr.io/gethomepage/homepage:v1.7.0
+    container_name: homepage
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+      - HOMEPAGE_ALLOWED_HOSTS=hub.${DOMAIN:-yourdomain.com}
+      # Domain
+      - HOMEPAGE_VAR_DOMAIN=${DOMAIN:-yourdomain.com}
+      # Media Services API Keys
+      - HOMEPAGE_VAR_JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - HOMEPAGE_VAR_JELLYSEERR_API_KEY=${JELLYSEERR_API_KEY}
+      - HOMEPAGE_VAR_SONARR_API_KEY=${SONARR_API_KEY}
+      - HOMEPAGE_VAR_RADARR_API_KEY=${RADARR_API_KEY}
+      - HOMEPAGE_VAR_LIDARR_API_KEY=${LIDARR_API_KEY}
+      - HOMEPAGE_VAR_BAZARR_API_KEY=${BAZARR_API_KEY}
+      - HOMEPAGE_VAR_PROWLARR_API_KEY=${PROWLARR_API_KEY}
+      - HOMEPAGE_VAR_QBITTORRENT_USER=${QBITTORRENT_USER:-admin}
+      - HOMEPAGE_VAR_QBITTORRENT_PASS=${QBITTORRENT_PASS}
+      - HOMEPAGE_VAR_SABNZBD_API_KEY=${SABNZBD_API_KEY}
+    volumes:
+      - ${CONFIG_ROOT}/homepage:/app/config
+      - ${CONFIG_ROOT}/homepage/images:/app/public/images
+    ports:
+      - "3000:3000"
+    networks:
+      arr_network:
+    depends_on:
+      homepage-init:
+        condition: service_completed_successfully
+      gluetun:
+        condition: service_started
+    restart: unless-stopped
+
+networks:
+  arr_network:
+    driver: bridge
+
+configs:
+  caddyfile:
+    file: ./Caddyfile
+
+volumes:
+  gluetun_portforward:

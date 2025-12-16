@@ -1,0 +1,90 @@
+{
+    email {$LETSENCRYPT_EMAIL}
+}
+
+(tls_cf) {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+}
+
+# Download Clients (via VPN)
+qbittorrent.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:8080
+}
+
+sabnzbd.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:8085
+}
+
+# Indexer (via VPN)
+prowlarr.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:9696
+}
+
+# Media Management - TV (via VPN)
+tv.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:8989
+}
+
+# Media Management - Movies (via VPN)
+movies.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:7878
+}
+
+# Media Management - Music (via VPN)
+music.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:8686
+}
+
+# Media Management - Books (via VPN)
+books.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:5299
+}
+
+# Subtitles (via VPN)
+captions.{$DOMAIN}, bazarr.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:6767
+}
+
+# Utilities (via VPN)
+flaresolverr.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:8191
+}
+
+notify.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:5454
+}
+
+unpackerr.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:5656
+}
+
+# Media Server (Direct - No VPN)
+watch.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy jellyfin:8096
+}
+
+# Media Requests (Direct - No VPN)
+guide.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy jellyseerr:5055
+}
+
+# Dashboard (Direct - No VPN)
+hub.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy homepage:3000
+}

@@ -1,0 +1,116 @@
+---
+# Streaming & Requests
+- Streaming:
+    - Jellyfin:
+        icon: jellyfin.png
+        href: https://watch.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Stream your media library
+        widget:
+          type: jellyfin
+          url: http://jellyfin:8096
+          key: "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}"
+          enableBlocks: true
+          enableNowPlaying: true
+
+    - Jellyseerr:
+        icon: jellyseerr.png
+        href: https://guide.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Request movies & shows
+        widget:
+          type: jellyseerr
+          url: http://jellyseerr:5055
+          key: "{{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}"
+
+# Content Management
+- Content Management:
+    - Sonarr:
+        icon: sonarr.png
+        href: https://tv.{{HOMEPAGE_VAR_DOMAIN}}
+        description: TV series automation
+        widget:
+          type: sonarr
+          url: http://gluetun:8989
+          key: "{{HOMEPAGE_VAR_SONARR_API_KEY}}"
+          enableQueue: false
+
+    - Radarr:
+        icon: radarr.png
+        href: https://movies.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Movie automation
+        widget:
+          type: radarr
+          url: http://gluetun:7878
+          key: "{{HOMEPAGE_VAR_RADARR_API_KEY}}"
+          enableQueue: false
+
+    - Lidarr:
+        icon: lidarr.png
+        href: https://music.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Music automation
+        widget:
+          type: lidarr
+          url: http://gluetun:8686
+          key: "{{HOMEPAGE_VAR_LIDARR_API_KEY}}"
+          enableQueue: false
+
+    - Bazarr:
+        icon: bazarr.png
+        href: https://captions.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Subtitle management
+        widget:
+          type: bazarr
+          url: http://gluetun:6767
+          key: "{{HOMEPAGE_VAR_BAZARR_API_KEY}}"
+
+# Downloads & Indexers
+- Downloads & Indexers:
+    - Prowlarr:
+        icon: prowlarr.png
+        href: https://prowlarr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Indexer management
+        widget:
+          type: prowlarr
+          url: http://gluetun:9696
+          key: "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}"
+
+    - qBittorrent:
+        icon: qbittorrent.png
+        href: https://qbittorrent.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Torrent downloads
+        widget:
+          type: qbittorrent
+          url: http://gluetun:8080
+          username: "{{HOMEPAGE_VAR_QBITTORRENT_USER}}"
+          password: "{{HOMEPAGE_VAR_QBITTORRENT_PASS}}"
+
+    - SABnzbd:
+        icon: sabnzbd.png
+        href: https://sabnzbd.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Usenet downloads
+        widget:
+          type: sabnzbd
+          url: http://gluetun:8085
+          key: "{{HOMEPAGE_VAR_SABNZBD_API_KEY}}"
+
+    - Gluetun:
+        icon: gluetun.png
+        description: VPN protection
+        widget:
+          type: gluetun
+          url: http://gluetun:8000
+
+    - LazyLibrarian:
+        icon: lazylibrarian.png
+        href: https://books.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Book downloads
+
+# Tools
+- Tools:
+    - Notifiarr:
+        icon: notifiarr.png
+        href: https://notify.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Notifications & stats
+
+    - Flaresolverr:
+        icon: flaresolverr.png
+        description: Cloudflare bypass

@@ -1,0 +1,26 @@
+---
+- logo:
+    icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/jellyfin.png
+
+- greeting:
+    text_size: xl
+    text: Welcome to your Media Hub
+
+- datetime:
+    text_size: lg
+    format:
+      dateStyle: long
+      timeStyle: short
+      hourCycle: h23
+
+- search:
+    provider: google
+    target: _blank
+    focus: true
+
+- resources:
+    backend: docker
+    expanded: false
+    cpu: true
+    memory: true
+    disk: /
