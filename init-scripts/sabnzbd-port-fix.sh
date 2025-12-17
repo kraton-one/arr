@@ -19,6 +19,7 @@ host = 0.0.0.0
 port = 8085
 host_whitelist = sabnzbd.${DOMAIN}, qbittorrent.${DOMAIN}, gluetun
 EOF
+    chown abc:abc "$CONFIG_FILE"
     echo "[custom-init] Created initial config with port 8085 and host whitelist"
 else
     echo "[custom-init] Config file exists, updating configuration"
@@ -26,6 +27,7 @@ else
     if grep -q "^\[misc\]" "$CONFIG_FILE"; then
         # Use awk to only modify port in [misc] section
         awk '/^\[misc\]/{p=1} /^\[/ && !/^\[misc\]/{p=0} p && /^port = /{$0="port = 8085"; modified=1} {print} END{if(p && !modified) print "port = 8085"}' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        chown abc:abc "$CONFIG_FILE"
         echo "[custom-init] Updated port to 8085 in [misc] section"
     fi
 
@@ -33,6 +35,7 @@ else
     if grep -q "^\[misc\]" "$CONFIG_FILE"; then
         # Use awk to only modify host in [misc] section
         awk '/^\[misc\]/{p=1} /^\[/ && !/^\[misc\]/{p=0} p && /^host = /{$0="host = 0.0.0.0"; modified=1} {print} END{if(p && !modified) print "host = 0.0.0.0"}' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        chown abc:abc "$CONFIG_FILE"
         echo "[custom-init] Updated host to 0.0.0.0 in [misc] section"
     fi
 
