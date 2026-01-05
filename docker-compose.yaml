@@ -8,23 +8,8 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - "8080:8080"   # qBittorrent WebUI
-      - "9696:9696"   # Prowlarr
-      - "8989:8989"   # Sonarr
-      - "7878:7878"   # Radarr
-      - "8686:8686"   # Lidarr
-      - "6767:6767"   # Bazarr
-      - "8191:8191"   # flaresolverr
-      - "5299:5299"   # LazyLibrarian
-      - "5454:5454"   # Notifiarr
-      - "8085:8085"   # SABnzbd
-      - "5656:5656"   # Unpackerr
-      - "8096:8096"   #jellyseer
-      - "8920:8920"   # HTTPS
-      - "7359:7359/udp"  # Auto-discovery
-      - "1900:1900/udp"  # DLNA
-      - "5055:5055"   # jellyseer
-
+      - "7359:7359/udp"  # Jellyfin auto-discovery
+      - "1900:1900/udp"  # Jellyfin DLNA
     environment:
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_PROVIDER=protonvpn
