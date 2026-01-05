@@ -27,9 +27,11 @@ This setup uses a **single-host architecture** running on TrueNAS or any Docker-
   - Jellyseerr (media requests)
   - Homepage (dashboard)
 
-- **Shared Infrastructure**
-  - Caddy reverse proxy with automatic Let's Encrypt SSL (Cloudflare DNS challenge)
-  - All services accessible via friendly subdomains on your domain
+- **Dual Reverse Proxy Infrastructure**
+  - **Caddy (arr services)**: Binds to `SERVICES_IP` - handles all download and management services
+  - **Caddy Media**: Binds to `HOST_IP` - handles Jellyfin and Jellyseerr
+  - Both instances use automatic Let's Encrypt SSL (Cloudflare DNS challenge)
+  - All services accessible only via friendly subdomains (no direct port access)
 
 ## Services
 
@@ -64,17 +66,17 @@ This setup uses a **single-host architecture** running on TrueNAS or any Docker-
 
 ### Media Serving (Direct - No VPN)
 - **Jellyfin** - Media server
-  - https://watch.yourdomain.com | https://jellyfin.yourdomain.com
-  - Local: http://YOUR_HOST_IP:8096
+  - https://watch.yourdomain.com
 - **Jellyseerr** - Media request management
-  - https://guide.yourdomain.com | https://jellyseerr.yourdomain.com
-  - Local: http://YOUR_HOST_IP:5055
+  - https://guide.yourdomain.com
 
 ### Infrastructure
 - **Homepage** - Unified dashboard with service widgets
   - https://hub.yourdomain.com
   - Local: http://YOUR_HOST_IP:3000
-- **Caddy** - Reverse proxy with automatic Let's Encrypt SSL (Cloudflare DNS)
+- **Caddy** - Dual reverse proxy instances with automatic Let's Encrypt SSL (Cloudflare DNS)
+  - Main Caddy: arr services (bound to `SERVICES_IP`)
+  - Caddy Media: Jellyfin/Jellyseerr (bound to `HOST_IP`)
 
 ## Quick Start
 
@@ -136,15 +138,12 @@ docker compose down
 
 ### 4. Access Services
 
-All services are available via your configured domains (see Services section above) or locally:
-- Homepage: http://YOUR_HOST_IP:3000
-- Jellyfin: http://YOUR_HOST_IP:8096
-- Jellyseerr: http://YOUR_HOST_IP:5055
-- qBittorrent: http://YOUR_HOST_IP:8080
-- SABnzbd: http://YOUR_HOST_IP:8085 (via gluetun)
-- Sonarr: http://YOUR_HOST_IP:8989 (via gluetun)
-- Radarr: http://YOUR_HOST_IP:7878 (via gluetun)
-- Prowlarr: http://YOUR_HOST_IP:9696 (via gluetun)
+All services are accessible via your configured domain names (see Services section above):
+- **Arr services**: https://[service].yourdomain.com (proxied via Caddy on SERVICES_IP)
+- **Media services**: https://watch.yourdomain.com, https://guide.yourdomain.com (proxied via Caddy Media on HOST_IP)
+- **Homepage**: http://YOUR_HOST_IP:3000 (only service with direct port access)
+
+**Note**: For security, all web services (except Homepage) are only accessible through Caddy reverse proxy with SSL. Direct port access has been removed.
 
 ## Deployment
 
@@ -178,12 +177,13 @@ docker compose ps
 ### Network Configuration
 
 **Port Bindings:**
-By default, services bind to specific IPs for security. Update in [docker-compose.yaml](docker-compose.yaml):
-- Jellyfin ports: `8096` (HTTP), `8920` (HTTPS), `7359/udp`, `1900/udp`
-- Jellyseerr: `5055`
-- Caddy HTTP/HTTPS: `80`, `443`
-- Homepage: `3000`
-- All VPN-routed services accessible through gluetun on their respective ports
+Services are secured behind Caddy reverse proxies. Configure IPs in [.env](.env):
+- **Main Caddy** (`SERVICES_IP`): Binds to specific IP on port `443` for arr services
+- **Caddy Media** (`HOST_IP`): Binds to specific IP on port `443` for Jellyfin/Jellyseerr
+- **Homepage**: Port `3000` (direct access)
+- **Jellyfin Discovery**: `7359/udp` (auto-discovery), `1900/udp` (DLNA)
+
+**Note**: All web services are only accessible through Caddy reverse proxy (HTTPS with SSL). Direct port access removed for security.
 
 **Firewall Configuration:**
 Update `FIREWALL_INBOUND_SUBNETS` in [docker-compose.yaml](docker-compose.yaml) to match your network:
@@ -221,13 +221,13 @@ Update `FIREWALL_INBOUND_SUBNETS` in [docker-compose.yaml](docker-compose.yaml) 
 ### Download Client Configuration
 
 #### qBittorrent
-- Initial WebUI access: `http://YOUR_HOST_IP:8080`
+- WebUI access: `https://qbittorrent.yourdomain.com` (via Caddy)
 - Username: `admin` (or value from `QBITTORRENT_USER`)
 - Password: Set via `QBITTORRENT_PASS` in [.env](.env)
 - The init script automatically configures port forwarding from Gluetun
 
 #### SABnzbd
-- Initial WebUI access: `http://YOUR_HOST_IP:8085`
+- WebUI access: `https://sabnzbd.yourdomain.com` (via Caddy)
 - API key: Set via `SABNZBD_API_KEY` in [.env](.env) after first run
 - Configure your Usenet provider in SABnzbd settings
 - The init script fixes bind address issues for VPN compatibility
@@ -268,26 +268,33 @@ Homepage shows real-time stats for all services. To enable widgets:
 
 ### Caddy SSL Certificates
 
-Caddy automatically obtains Let's Encrypt SSL certificates using Cloudflare DNS challenge.
+Two Caddy instances automatically obtain Let's Encrypt SSL certificates using Cloudflare DNS challenge.
 
 **Setup:**
-1. Set your domain in [.env](.env):
+1. Set configuration in [.env](.env):
    ```bash
    DOMAIN=example.com
+   SERVICES_IP=192.168.1.100  # IP for arr services Caddy
+   HOST_IP=192.168.1.101      # IP for media services Caddy
    ```
 
-2. All subdomains are automatically configured via the [Caddyfile](Caddyfile):
-   - `qbittorrent.example.com`
-   - `tv.example.com`, `sonarr.example.com`
-   - `movies.example.com`, `radarr.example.com`
-   - `watch.example.com`, `jellyfin.example.com`
+2. **Main Caddy** ([Caddyfile](Caddyfile)) handles arr services:
+   - `qbittorrent.example.com`, `sabnzbd.example.com`
+   - `tv.example.com`, `movies.example.com`, `music.example.com`, `books.example.com`
+   - `prowlarr.example.com`, `bazarr.example.com`
+   - `hub.example.com` (Homepage)
    - And more... (see Services section)
 
+3. **Caddy Media** ([Caddyfile.media](Caddyfile.media)) handles media services:
+   - `watch.example.com` (Jellyfin)
+   - `guide.example.com` (Jellyseerr)
+
 **Requirements:**
-- Domain pointed to your server (or Cloudflare proxy enabled)
+- Domain DNS pointed to your server IPs (or Cloudflare proxy enabled)
 - Cloudflare API token with DNS edit permissions
 - Token added to [.env](.env) as `CLOUDFLARE_API_TOKEN`
 - Email address in `LETSENCRYPT_EMAIL` for certificate notifications
+- Both Caddy instances share certificate storage to avoid duplicate ACME challenges
 
 ## Network Architecture
 
@@ -296,12 +303,25 @@ Caddy automatically obtains Let's Encrypt SSL certificates using Cloudflare DNS 
                     │         Internet            │
                     └──────────────┬──────────────┘
                                    │
-                        ┌──────────┴──────────┐
-                        │   Caddy (80/443)    │
-                        │  Reverse Proxy +    │
-                        │   Let's Encrypt     │
-                        │   Cloudflare DNS    │
-                        └──────────┬──────────┘
+                    ┌──────────────┴──────────────┐
+                    │   Dual Caddy Instances      │
+                    │                             │
+                    │  ┌─────────────────────┐   │
+                    │  │ Caddy (SERVICES_IP) │   │
+                    │  │   Arr Services      │   │
+                    │  │   Port: 443         │   │
+                    │  └─────────────────────┘   │
+                    │                             │
+                    │  ┌─────────────────────┐   │
+                    │  │ Caddy Media         │   │
+                    │  │   (HOST_IP)         │   │
+                    │  │   Jellyfin/seerr    │   │
+                    │  │   Port: 443         │   │
+                    │  └─────────────────────┘   │
+                    │                             │
+                    │   Let's Encrypt SSL         │
+                    │   Cloudflare DNS            │
+                    └──────────────┬──────────────┘
                                    │
                     ┌──────────────┴──────────────┐
                     │      Docker Host            │
@@ -314,28 +334,24 @@ Caddy automatically obtains Let's Encrypt SSL certificates using Cloudflare DNS 
    ┌────────┴─────────┐   ┌────────┴─────────┐   ┌───────┴────────┐
    │    Gluetun       │   │  Jellyfin        │   │   Homepage     │
    │  (VPN Gateway)   │   │ (Media Server)   │   │  (Dashboard)   │
-   │   ProtonVPN WG   │   │   Port: 8096     │   │   Port: 3000   │
+   │   ProtonVPN WG   │   │ UDP: 7359, 1900  │   │   Port: 3000   │
    └────────┬─────────┘   └──────────────────┘   └────────────────┘
             │
    ┌────────┴─────────────────────────────┐
    │  VPN-Protected Services              │
+   │  (No direct port access)             │
    ├──────────────────────────────────────┤
    │  Download Clients:                   │
-   │  • qBittorrent (8080)                │
-   │  • SABnzbd (8085)                    │
+   │  • qBittorrent                       │
+   │  • SABnzbd                           │
    │                                      │
    │  Media Management:                   │
-   │  • Sonarr (8989)                     │
-   │  • Radarr (7878)                     │
-   │  • Lidarr (8686)                     │
-   │  • Bazarr (6767)                     │
-   │  • LazyLibrarian (5299)              │
+   │  • Sonarr • Radarr • Lidarr          │
+   │  • Bazarr • LazyLibrarian            │
    │                                      │
    │  Utilities:                          │
-   │  • Prowlarr (9696)                   │
-   │  • Unpackerr (5656)                  │
-   │  • Notifiarr (5454)                  │
-   │  • FlareSolverr (8191)               │
+   │  • Prowlarr • Unpackerr              │
+   │  • Notifiarr • FlareSolverr          │
    └──────────────────────────────────────┘
             │
    ┌────────┴─────────┐
@@ -363,10 +379,12 @@ Caddy automatically obtains Let's Encrypt SSL certificates using Cloudflare DNS 
 - Port forwarding enabled for torrent connectivity
 - Firewall configured to allow local subnet access
 
-**SSL/TLS:**
-- Caddy handles all external HTTPS traffic
+**Dual Reverse Proxy Security:**
+- Two Caddy instances on separate IPs for network segmentation
+- All services accessible only via HTTPS (no direct port access)
 - Automatic Let's Encrypt certificates via Cloudflare DNS
 - Friendly subdomains for all services
+- Jellyfin/Jellyseerr isolated on separate proxy for flexibility
 
 ## Troubleshooting
 
@@ -425,17 +443,22 @@ docker compose logs sabnzbd | grep -i "bind"
 ### Caddy SSL Issues
 
 ```bash
-# Check Caddy logs
+# Check main Caddy logs (arr services)
 docker compose logs caddy
+
+# Check media Caddy logs (Jellyfin/Jellyseerr)
+docker compose logs caddy-media
 
 # Verify Cloudflare API token is set
 docker compose exec caddy env | grep CLOUDFLARE
+docker compose exec caddy-media env | grep CLOUDFLARE
 
-# Test certificate (replace with your domain)
-curl -vI https://jellyfin.yourdomain.com
+# Test certificates (replace with your domain)
+curl -vI https://tv.yourdomain.com        # Main Caddy
+curl -vI https://watch.yourdomain.com     # Media Caddy
 
 # Force certificate renewal
-docker compose restart caddy
+docker compose restart caddy caddy-media
 ```
 
 ### Permission Issues
@@ -514,8 +537,9 @@ Recommended directory structure:
    - Docker network: `172.28.0.0/16`
 4. **API keys** - Stored in environment variables, never hardcoded
 5. **SSL/TLS** - All external traffic encrypted via Caddy with Let's Encrypt
-6. **Port binding** - Consider binding services to specific host IP (not 0.0.0.0) for security
-7. **Network isolation** - VPN services isolated from direct internet access
+6. **No direct port access** - All services (except Homepage) accessible only through Caddy reverse proxy
+7. **Dual proxy isolation** - Arr services and media services on separate Caddy instances/IPs
+8. **Network isolation** - VPN services isolated from direct internet access
 
 ## Key Features
 

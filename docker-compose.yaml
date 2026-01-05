@@ -8,8 +8,8 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - "7359:7359/udp"  # Jellyfin auto-discovery
-      - "1900:1900/udp"  # Jellyfin DLNA
+      - "${HOST_IP:-0.0.0.0}:7359:7359/udp"  # Jellyfin auto-discovery
+      - "${HOST_IP:-0.0.0.0}:1900:1900/udp"  # Jellyfin DLNA
     environment:
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_PROVIDER=protonvpn
