@@ -19,6 +19,11 @@ services:
       - "5454:5454"   # Notifiarr
       - "8085:8085"   # SABnzbd
       - "5656:5656"   # Unpackerr
+      - "8096:8096"   #jellyseer
+      - "8920:8920"   # HTTPS
+      - "7359:7359/udp"  # Auto-discovery
+      - "1900:1900/udp"  # DLNA
+      - "5055:5055"   # jellyseer
 
     environment:
       - VPN_PORT_FORWARDING=on
@@ -298,17 +303,16 @@ services:
       - ${MEDIA_ROOT}/library/movies:/data/movies
       - ${MEDIA_ROOT}/library/music:/data/music
       - ${MEDIA_ROOT}/library/books:/data/books
-    ports:
-      - "${HOST_IP:-0.0.0.0}:8096:8096"
-      - "${HOST_IP:-0.0.0.0}:8920:8920"  # HTTPS
-      - "${HOST_IP:-0.0.0.0}:7359:7359/udp"  # Auto-discovery
-      - "${HOST_IP:-0.0.0.0}:1900:1900/udp"  # DLNA
+    #ports:
+    #  - "${HOST_IP:-0.0.0.0}:8096:8096"
+    #  - "${HOST_IP:-0.0.0.0}:8920:8920"  # HTTPS
+    #  - "${HOST_IP:-0.0.0.0}:7359:7359/udp"  # Auto-discovery
+    #  - "${HOST_IP:-0.0.0.0}:1900:1900/udp"  # DLNA
     devices:
       - /dev/dri:/dev/dri
-    group_add:           # <--- ONLY needed if you hit permission errors (see below)
+    group_add:           # <--- ONLY needed if you hit permission errors (see below)curl 
       - "107"
-    networks:
-      arr_network:
+    network_mode: "service:gluetun"
     restart: unless-stopped
 
   # Jellyseerr - Media request management (direct connection, no VPN)
@@ -321,13 +325,12 @@ services:
       - TZ=${TZ:-America/Chicago}
     volumes:
       - ${CONFIG_ROOT}/jellyseerr:/app/config
-    ports:
-      - "${HOST_IP:-0.0.0.0}:5055:5055"
-    networks:
-      arr_network:
+    #ports:
+    #  - "${HOST_IP:-0.0.0.0}:5055:5055"
+    network_mode: "service:gluetun"
     restart: unless-stopped
 
-  # Caddy - Reverse proxy for ALL services (arr + media)
+  # Caddy - Reverse proxy for arr services
   caddy:
     build:
       context: .
@@ -345,7 +348,31 @@ services:
       - source: caddyfile
         target: /etc/caddy/Caddyfile
     ports:
-      - "${HOST_IP:-0.0.0.0}:80:80"
+      - "${SERVICES_IP:-0.0.0.0}:443:443"
+    depends_on:
+      - gluetun
+    networks:
+      arr_network:
+    restart: unless-stopped
+
+  # Caddy Media - Reverse proxy for media services (Jellyfin, Jellyseerr)
+  caddy-media:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    container_name: caddy-media
+    environment:
+      - TZ=${TZ:-America/Chicago}
+      - DOMAIN=${DOMAIN:-yourdomain.com}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-your-email@example.com}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - ${CONFIG_ROOT}/caddy-media/data:/data
+      - ${CONFIG_ROOT}/caddy-media/config:/config
+    configs:
+      - source: caddyfile_media
+        target: /etc/caddy/Caddyfile
+    ports:
       - "${HOST_IP:-0.0.0.0}:443:443"
     depends_on:
       - gluetun
@@ -414,6 +441,8 @@ networks:
 configs:
   caddyfile:
     file: ./Caddyfile
+  caddyfile_media:
+    file: ./Caddyfile.media
 
 volumes:
   gluetun_portforward:

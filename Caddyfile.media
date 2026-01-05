@@ -1,0 +1,21 @@
+{
+    email {$LETSENCRYPT_EMAIL}
+}
+
+(tls_cf) {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+}
+
+# Media Server (Direct - No VPN)
+watch.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:8096
+}
+
+# Media Requests (Direct - No VPN)
+guide.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:5055
+}
