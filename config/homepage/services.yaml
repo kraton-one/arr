@@ -7,19 +7,19 @@
         description: Stream your media library
         widget:
           type: jellyfin
-          url: http://jellyfin:8096
+          url: http://gluetun:8096
           key: "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}"
           enableBlocks: true
           enableNowPlaying: true
 
-    - Jellyseerr:
+    - Seerr:
         icon: jellyseerr.png
         href: https://guide.{{HOMEPAGE_VAR_DOMAIN}}
         description: Request movies & shows
         widget:
           type: jellyseerr
-          url: http://jellyseerr:5055
-          key: "{{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}"
+          url: http://gluetun:5055
+          key: "{{HOMEPAGE_VAR_SEERR_API_KEY}}"
 
 # Content Management
 - Content Management:
