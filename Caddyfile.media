@@ -1,5 +1,8 @@
 {
     email {$LETSENCRYPT_EMAIL}
+    log {
+        level INFO
+    }
 }
 
 (tls_cf) {
@@ -11,11 +14,19 @@
 # Media Server (Direct - No VPN)
 watch.{$DOMAIN} {
     import tls_cf
-    reverse_proxy gluetun:8096
+    log {
+        output stderr
+    }
+    reverse_proxy jellyfin:8096 {
+        flush_interval -1
+        header_up -If-Modified-Since
+        header_up -If-None-Match
+    }
+    header /videos/* Cache-Control "no-store"
 }
 
 # Media Requests (Direct - No VPN)
 guide.{$DOMAIN} {
     import tls_cf
-    reverse_proxy gluetun:5055
+    reverse_proxy seerr:5055
 }

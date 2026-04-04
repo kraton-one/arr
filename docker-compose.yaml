@@ -7,9 +7,6 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
-    ports:
-      - "${HOST_IP:-0.0.0.0}:7359:7359/udp"  # Jellyfin auto-discovery
-      - "${HOST_IP:-0.0.0.0}:1900:1900/udp"  # Jellyfin DLNA
     environment:
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_PROVIDER=protonvpn
@@ -24,6 +21,7 @@ services:
       - FIREWALL_INBOUND_SUBNETS=${FIREWALL_INBOUND_SUBNETS:-192.168.1.0/24,172.28.0.0/16}
       - TZ=${TZ:-America/Chicago}
       - HEALTH_VPN_DURATION_INITIAL=60s
+      - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
     volumes:
       - ${CONFIG_ROOT}/gluetun:/gluetun
       - gluetun_portforward:/tmp/gluetun
@@ -288,16 +286,17 @@ services:
       - ${MEDIA_ROOT}/library/movies:/data/movies
       - ${MEDIA_ROOT}/library/music:/data/music
       - ${MEDIA_ROOT}/library/books:/data/books
-    #ports:
-    #  - "${HOST_IP:-0.0.0.0}:8096:8096"
-    #  - "${HOST_IP:-0.0.0.0}:8920:8920"  # HTTPS
-    #  - "${HOST_IP:-0.0.0.0}:7359:7359/udp"  # Auto-discovery
-    #  - "${HOST_IP:-0.0.0.0}:1900:1900/udp"  # DLNA
+    ports:
+      - "${HOST_IP:-0.0.0.0}:8096:8096"
+      - "${HOST_IP:-0.0.0.0}:8920:8920"      # HTTPS
+      - "${HOST_IP:-0.0.0.0}:7359:7359/udp"  # Auto-discovery
+      - "${HOST_IP:-0.0.0.0}:1900:1900/udp"  # DLNA
     devices:
       - /dev/dri:/dev/dri
-    group_add:           # <--- ONLY needed if you hit permission errors (see below)curl 
+    group_add:
       - "107"
-    network_mode: "service:gluetun"
+    networks:
+      arr_network:
     restart: unless-stopped
 
   # Seerr - Media request management (direct connection, no VPN)
@@ -308,10 +307,11 @@ services:
     environment:
       - TZ=${TZ:-America/Chicago}
     volumes:
-      - ${CONFIG_ROOT}/seerr:/app/config
-    #ports:
-    #  - "${HOST_IP:-0.0.0.0}:5055:5055"
-    network_mode: "service:gluetun"
+      - ${CONFIG_ROOT}/jellyseerr:/app/config
+    ports:
+      - "${HOST_IP:-0.0.0.0}:5055:5055"
+    networks:
+      arr_network:
     restart: unless-stopped
 
   # Caddy - Reverse proxy for arr services
@@ -338,7 +338,7 @@ services:
     networks:
       arr_network:
     restart: unless-stopped
-vi .e
+
   caddy-media:
     build:
       context: .
