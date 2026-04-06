@@ -12,6 +12,20 @@
           enableBlocks: true
           enableNowPlaying: true
 
+    - Audiobookshelf:
+        icon: audiobookshelf.png
+        href: https://listen.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Audiobooks & podcasts
+        widget:
+          type: audiobookshelf
+          url: http://audiobookshelf:80
+          key: "{{HOMEPAGE_VAR_AUDIOBOOKSHELF_API_KEY}}"
+
+    - Calibre-Web:
+        icon: calibre-web.png
+        href: https://read.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Ebook library
+
     - Seerr:
         icon: jellyseerr.png
         href: https://guide.{{HOMEPAGE_VAR_DOMAIN}}

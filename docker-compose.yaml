@@ -184,7 +184,9 @@ services:
 
   # LazyLibrarian - Ebook management (through VPN)
   lazylibrarian:
-    image: lscr.io/linuxserver/lazylibrarian:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.lazylibrarian
     container_name: lazylibrarian
     environment:
       - PUID=${PUID:-1000}
@@ -193,6 +195,7 @@ services:
     volumes:
       - ${CONFIG_ROOT}/lazylibrarian:/config
       - ${MEDIA_ROOT}/library/books:/books
+      - ${MEDIA_ROOT}/library/audiobooks:/audiobooks
       - ${MEDIA_ROOT}/downloads:/downloads
       - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
     network_mode: "service:gluetun"
@@ -299,6 +302,91 @@ services:
       arr_network:
     restart: unless-stopped
 
+  # Audiobookshelf - Audiobook & podcast server (direct connection, no VPN)
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    environment:
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/audiobookshelf/config:/config
+      - ${CONFIG_ROOT}/audiobookshelf/metadata:/metadata
+      - ${MEDIA_ROOT}/library/audiobooks:/audiobooks
+      - ${MEDIA_ROOT}/library/podcasts:/podcasts
+    ports:
+      - "${HOST_IP:-0.0.0.0}:13378:80"
+    networks:
+      arr_network:
+    restart: unless-stopped
+
+  # Calibre-Web - Ebook library web interface (direct connection, no VPN)
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/calibre-web:/config
+      - ${MEDIA_ROOT}/library/books:/books
+    ports:
+      - "${HOST_IP:-0.0.0.0}:8083:8083"
+    networks:
+      arr_network:
+    restart: unless-stopped
+
+  # Calibre - Ebook library manager (direct connection, no VPN)
+  calibre:
+    image: lscr.io/linuxserver/calibre:latest
+    container_name: calibre
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/calibre:/config
+      - ${MEDIA_ROOT}/library/books:/books
+    ports:
+      - "${HOST_IP:-0.0.0.0}:8080:8080"
+      - "${HOST_IP:-0.0.0.0}:8181:8181"
+    networks:
+      arr_network:
+    restart: unless-stopped
+
+  # Tdarr - Automated media transcoding (direct connection, no VPN)
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    container_name: tdarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Chicago}
+      - UMASK_SET=002
+      - serverIP=${TDARR_SERVER_IP:-0.0.0.0}
+      - serverPort=8266
+      - webUIPort=8265
+      - internalNode=true
+      - inContainer=true
+      - ffmpegVersion=7
+      - enableDockerAutoUpdater=false
+      - nodeName=MediaServer
+    volumes:
+      - ${CONFIG_ROOT}/tdarr/server:/app/server
+      - ${CONFIG_ROOT}/tdarr/configs:/app/configs
+      - ${CONFIG_ROOT}/tdarr/logs:/app/logs
+      - ${MEDIA_ROOT}/library/movies:/media/movies
+      - ${MEDIA_ROOT}/library/tv:/media/tv
+      - ${TDARR_CACHE_ROOT:-${MEDIA_ROOT}/transcode_cache}:/temp
+    ports:
+      - "${HOST_IP:-0.0.0.0}:8265:8265"
+      - "${TDARR_SERVER_IP:-0.0.0.0}:8266:8266"
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      arr_network:
+    restart: unless-stopped
+
   # Seerr - Media request management (direct connection, no VPN)
   seerr:
     image: ghcr.io/seerr-team/seerr:latest
@@ -360,6 +448,8 @@ services:
     depends_on:
       - gluetun
       - jellyfin
+      - calibre
+      - calibre-web
       - seerr
     networks:
       arr_network:
@@ -403,6 +493,7 @@ services:
       - HOMEPAGE_VAR_QBITTORRENT_USER=${QBITTORRENT_USER:-admin}
       - HOMEPAGE_VAR_QBITTORRENT_PASS=${QBITTORRENT_PASS}
       - HOMEPAGE_VAR_SABNZBD_API_KEY=${SABNZBD_API_KEY}
+      - HOMEPAGE_VAR_AUDIOBOOKSHELF_API_KEY=${AUDIOBOOKSHELF_API_KEY:-}
     volumes:
       - ${CONFIG_ROOT}/homepage:/app/config
       - ${CONFIG_ROOT}/homepage/images:/app/public/images

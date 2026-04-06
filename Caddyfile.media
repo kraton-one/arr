@@ -25,6 +25,38 @@ watch.{$DOMAIN} {
     header /videos/* Cache-Control "no-store"
 }
 
+# Audiobookshelf (Direct - No VPN)
+listen.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy audiobookshelf:80 {
+        flush_interval -1
+        transport http {
+            read_timeout 30m
+            write_timeout 30m
+        }
+    }
+}
+
+# Tdarr - Media Transcoding (Direct - No VPN)
+tdarr.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy tdarr:8265
+}
+
+# Calibre - Ebook Library Manager (Direct - No VPN)
+library.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy calibre:8080
+}
+
+# Calibre-Web - Ebook Library (Direct - No VPN)
+read.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy calibre-web:8083 {
+        flush_interval -1
+    }
+}
+
 # Media Requests (Direct - No VPN)
 guide.{$DOMAIN} {
     import tls_cf
