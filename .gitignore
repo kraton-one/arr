@@ -7,3 +7,4 @@
 *.db
 .venv
 write_dns.sh
+scripts/

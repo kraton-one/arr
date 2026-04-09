@@ -57,6 +57,12 @@ read.{$DOMAIN} {
     }
 }
 
+# KOReader Sync - Reading Progress (Direct - No VPN)
+progress.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy kosync:7200
+}
+
 # Media Requests (Direct - No VPN)
 guide.{$DOMAIN} {
     import tls_cf

@@ -89,15 +89,18 @@ services:
       # Sonarr Integration
       - UN_SONARR_0_URL=http://gluetun:8989
       - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
-      - UN_SONARR_0_PATHS_0=/downloads
+      - UN_SONARR_0_PATHS_0=/downloads/complete
+      - UN_SONARR_0_PROTOCOLS=usenet,torrent
       # Radarr Integration
       - UN_RADARR_0_URL=http://gluetun:7878
       - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
-      - UN_RADARR_0_PATHS_0=/downloads
+      - UN_RADARR_0_PATHS_0=/downloads/complete
+      - UN_RADARR_0_PROTOCOLS=usenet,torrent
       # Lidarr Integration
       - UN_LIDARR_0_URL=http://gluetun:8686
       - UN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
-      - UN_LIDARR_0_PATHS_0=/downloads
+      - UN_LIDARR_0_PATHS_0=/downloads/complete
+      - UN_LIDARR_0_PROTOCOLS=usenet,torrent
     volumes:
       - ${CONFIG_ROOT}/unpackerr:/config
       - ${MEDIA_ROOT}/downloads:/downloads
@@ -315,6 +318,20 @@ services:
       - ${MEDIA_ROOT}/library/podcasts:/podcasts
     ports:
       - "${HOST_IP:-0.0.0.0}:13378:80"
+    networks:
+      arr_network:
+    restart: unless-stopped
+
+  # KOReader Sync - Reading progress sync server (direct connection, no VPN)
+  kosync:
+    image: koreader/kosync:latest
+    container_name: kosync
+    environment:
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/kosync:/data
+    ports:
+      - "${HOST_IP:-0.0.0.0}:7200:7200"
     networks:
       arr_network:
     restart: unless-stopped
