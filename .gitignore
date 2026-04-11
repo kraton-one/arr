@@ -2,6 +2,8 @@
 .env
 .claude/
 .codex/
+# TLS certificates and private keys
+config/soju/tls/
 # Runtime data
 *.log
 *.db

@@ -71,6 +71,12 @@ unpackerr.{$DOMAIN} {
     reverse_proxy gluetun:5656
 }
 
+# IRC Bouncer (via VPN)
+irc.{$DOMAIN} {
+    import tls_cf
+    reverse_proxy gluetun:6697
+}
+
 # Dashboard (Direct - No VPN)
 hub.{$DOMAIN} {
     import tls_cf

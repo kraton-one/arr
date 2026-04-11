@@ -25,6 +25,8 @@ services:
     volumes:
       - ${CONFIG_ROOT}/gluetun:/gluetun
       - gluetun_portforward:/tmp/gluetun
+    ports:
+      - "${SERVICES_IP:-0.0.0.0}:6697:6697"  # Soju IRC (TLS)
     networks:
       arr_network:
     healthcheck:
@@ -207,6 +209,26 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Rclone Seedbox Sync - Pulls completed downloads from seedit4me seedbox via SFTP
+  rclone-seedbox:
+    image: rclone/rclone:latest
+    container_name: rclone-seedbox
+    entrypoint: /bin/sh
+    command: /scripts/seedbox-sync.sh
+    environment:
+      - TZ=${TZ:-America/Chicago}
+      - SEEDBOX_HOST=${SEEDBOX_HOST}
+      - SEEDBOX_PORT=${SEEDBOX_PORT:-22}
+      - SEEDBOX_USER=${SEEDBOX_USER}
+      - SEEDBOX_PASS=${SEEDBOX_PASS}
+      - SEEDBOX_REMOTE_PATH=${SEEDBOX_REMOTE_PATH}
+    volumes:
+      - ${MEDIA_ROOT}/downloads:/downloads
+      - ./scripts/seedbox-sync.sh:/scripts/seedbox-sync.sh:ro
+    networks:
+      arr_network:
+    restart: unless-stopped
+
   # Bazarr - Subtitle management (through VPN)
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
@@ -328,10 +350,11 @@ services:
     container_name: kosync
     environment:
       - TZ=${TZ:-America/Chicago}
+      - ENABLE_USER_REGISTRATION=1
     volumes:
       - ${CONFIG_ROOT}/kosync:/data
     ports:
-      - "${HOST_IP:-0.0.0.0}:7200:7200"
+      - "${HOST_IP:-0.0.0.0}:7200:17200"
     networks:
       arr_network:
     restart: unless-stopped
@@ -417,6 +440,22 @@ services:
       - "${HOST_IP:-0.0.0.0}:5055:5055"
     networks:
       arr_network:
+    restart: unless-stopped
+
+  # Soju - IRC bouncer (through VPN)
+  soju:
+    image: codeberg.org/emersion/soju:latest
+    container_name: soju
+    environment:
+      - TZ=${TZ:-America/Chicago}
+    volumes:
+      - ${CONFIG_ROOT}/soju:/data
+      - ${CONFIG_ROOT}/soju/config:/soju-config:ro
+      - ${CONFIG_ROOT}/caddy/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/irc.kraton.sh:/tls:ro
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
     restart: unless-stopped
 
   # Caddy - Reverse proxy for arr services
