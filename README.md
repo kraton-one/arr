@@ -22,8 +22,11 @@ A fully containerized media management stack running on Docker. All download and
 | **Utilities** | [Unpackerr](https://unpackerr.zip/) | `unpackerr.*` | Automatic archive extraction |
 | | [Notifiarr](https://notifiarr.com/) | `notify.*` | Unified notifications |
 | | [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) | `flaresolverr.*` | Cloudflare bypass for indexers |
+| **Reading** | [KOSync](https://github.com/koreader/kosync) | `kosync.*` | Reading progress sync for KOReader |
+| **Chat** | [Soju](https://codeberg.org/emersion/soju) | `irc.*` | IRC bouncer (through VPN) |
 | **Transcoding** | [Tdarr](https://home.tdarr.io/) | `tdarr.*` | Automated media transcoding |
-| **Infrastructure** | [Gluetun](https://github.com/qdm12/gluetun) | &mdash; | VPN gateway (ProtonVPN WireGuard) |
+| **Infrastructure** | [Rclone](https://rclone.org/) | &mdash; | Seedbox SFTP sync for completed downloads |
+| | [Gluetun](https://github.com/qdm12/gluetun) | &mdash; | VPN gateway (ProtonVPN WireGuard) |
 | | [Caddy](https://caddyserver.com/) (x2) | &mdash; | Reverse proxy with auto SSL |
 | | [Homepage](https://gethomepage.dev/) | `hub.*` | Dashboard with service widgets |
 
@@ -61,9 +64,10 @@ A fully containerized media management stack running on Docker. All download and
    Sonarr / Radarr       │  Calibre / Calibre-Web
    Lidarr / Bazarr       │  Seerr
    Prowlarr              │  Tdarr
-   LazyLibrarian         │
-   Unpackerr / Notifiarr │
+   LazyLibrarian         │  KOSync
+   Unpackerr / Notifiarr │  Rclone (seedbox sync)
    FlareSolverr          │
+   Soju (IRC bouncer)    │
               │          │
          ┌────┴──────────┴────┐
          │   Local Storage    │
@@ -158,6 +162,16 @@ Run `id` on the host to confirm your UID/GID.
 To get these: log into ProtonVPN &rarr; Account &rarr; WireGuard configuration.
 
 To use a different VPN provider, update the `gluetun` environment variables in [`docker-compose.yaml`](docker-compose.yaml) per the [Gluetun wiki](https://github.com/qdm12/gluetun-wiki).
+
+#### Seedbox (Rclone Sync)
+
+| Variable | Description |
+|----------|-------------|
+| `SEEDBOX_HOST` | Seedbox SFTP hostname |
+| `SEEDBOX_PORT` | Seedbox SSH port (default: `22`) |
+| `SEEDBOX_USER` | Seedbox SSH username |
+| `SEEDBOX_PASS` | Seedbox SSH password |
+| `SEEDBOX_REMOTE_PATH` | Remote path to completed downloads |
 
 #### Credentials
 
@@ -261,7 +275,7 @@ Create DNS A records pointing each subdomain to the appropriate IP:
 | Records | Points To |
 |---------|-----------|
 | `watch`, `listen`, `read`, `library`, `guide`, `tdarr` | `HOST_IP` |
-| `tv`, `movies`, `music`, `books`, `captions`, `qbittorrent`, `sabnzbd`, `prowlarr`, `hub`, `notify`, `unpackerr`, `flaresolverr` | `SERVICES_IP` |
+| `tv`, `movies`, `music`, `books`, `captions`, `qbittorrent`, `sabnzbd`, `prowlarr`, `hub`, `notify`, `unpackerr`, `flaresolverr`, `irc`, `kosync` | `SERVICES_IP` |
 
 If using Cloudflare proxy (orange cloud), the DNS-01 challenge still works since it validates via TXT records, not HTTP.
 
