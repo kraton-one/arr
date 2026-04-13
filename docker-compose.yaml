@@ -103,6 +103,11 @@ services:
       - UN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
       - UN_LIDARR_0_PATHS_0=/downloads/complete
       - UN_LIDARR_0_PROTOCOLS=usenet,torrent
+      # Folder watch for book downloads (not managed by an *arr app)
+      - UN_FOLDER_0_PATH=/downloads/complete/books
+      - UN_FOLDER_0_DELETE_AFTER=10m
+      - UN_FOLDER_0_DELETE_ORIGINAL=false
+      - UN_FOLDER_0_MOVE_BACK=false
     volumes:
       - ${CONFIG_ROOT}/unpackerr:/config
       - ${MEDIA_ROOT}/downloads:/downloads
@@ -211,8 +216,11 @@ services:
 
   # Rclone Seedbox Sync - Pulls completed downloads from seedit4me seedbox via SFTP
   rclone-seedbox:
-    image: rclone/rclone:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.rclone-seedbox
     container_name: rclone-seedbox
+    user: "${PUID:-1000}:${PGID:-1000}"
     entrypoint: /bin/sh
     command: /scripts/seedbox-sync.sh
     environment:
