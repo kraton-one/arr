@@ -26,8 +26,8 @@ services:
       - tdarr-configs:/app/configs
       - tdarr-logs:/app/logs
       - ${TDARR_CACHE_ROOT:-/path/to/transcode_cache}:/temp
-      - ${MEDIA_ROOT:-/path/to/media}/library/movies:/media/movies
-      - ${MEDIA_ROOT:-/path/to/media}/library/tv:/media/tv
+      - ${MEDIA_ROOT:-/path/to/media}/library/movies:/media/movies:shared
+      - ${MEDIA_ROOT:-/path/to/media}/library/tv:/media/tv:shared
 
 volumes:
   tdarr-configs:
