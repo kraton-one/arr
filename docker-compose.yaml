@@ -572,6 +572,42 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # Xbox Convert - Convert raw-extracted Xbox games in XboxGames/ to CCI (run manually)
+  xbox-convert:
+    build:
+      context: .
+      dockerfile: Dockerfile.repackinator
+    container_name: xbox-convert
+    command: ["/app/xbox-convert.sh"]
+    environment:
+      - GAMES_DIR=/games
+      - WORK_DIR=/work
+    volumes:
+      - ${XBOX_ROOT:-/mnt/core_nas/games/xbox}/XboxGames:/games
+      - ${XBOX_ROOT:-/mnt/core_nas/games/xbox}/work:/work
+    profiles:
+      - tools
+    restart: "no"
+
+  # Xbox Pack - Extract 7z archives from complete/ and pack to CCI (run manually)
+  xbox-pack:
+    build:
+      context: .
+      dockerfile: Dockerfile.repackinator
+    container_name: xbox-pack
+    command: ["/app/xbox-pack.sh"]
+    environment:
+      - COMPLETE_DIR=/complete
+      - GAMES_DIR=/games
+      - WORK_DIR=/work
+    volumes:
+      - ${XBOX_ROOT:-/mnt/core_nas/games/xbox}/complete:/complete
+      - ${XBOX_ROOT:-/mnt/core_nas/games/xbox}/XboxGames:/games
+      - ${XBOX_ROOT:-/mnt/core_nas/games/xbox}/work:/work
+    profiles:
+      - tools
+    restart: "no"
+
 networks:
   arr_network:
     driver: bridge

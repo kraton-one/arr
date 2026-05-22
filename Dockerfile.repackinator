@@ -1,0 +1,28 @@
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    p7zip-full \
+    wget \
+    unzip \
+    ca-certificates \
+    libicu72 \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN wget -q "https://github.com/Team-Resurgent/Repackinator/releases/download/V2.0.4/Repackinator-linux-x64.tar" \
+        -O /tmp/repackinator.tar \
+    && tar -xf /tmp/repackinator.tar -C /app \
+    && rm /tmp/repackinator.tar \
+    && chmod +x /app/repackinator
+
+RUN wget -q "https://github.com/XboxDev/extract-xiso/releases/download/build-202505152050/extract-xiso_Linux.zip" \
+        -O /tmp/extract-xiso.zip \
+    && unzip -q /tmp/extract-xiso.zip extract-xiso -d /app \
+    && chmod +x /app/extract-xiso \
+    && rm /tmp/extract-xiso.zip
+
+COPY scripts/xbox-convert.sh /app/xbox-convert.sh
+COPY scripts/xbox-pack.sh /app/xbox-pack.sh
+RUN chmod +x /app/xbox-convert.sh /app/xbox-pack.sh
