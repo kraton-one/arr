@@ -361,6 +361,7 @@ services:
       - ENABLE_USER_REGISTRATION=1
     volumes:
       - ${CONFIG_ROOT}/kosync:/data
+      - ${CONFIG_ROOT}/kosync-redis:/var/lib/redis
     ports:
       - "${HOST_IP:-0.0.0.0}:7200:17200"
     networks:
