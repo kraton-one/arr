@@ -172,6 +172,13 @@ To use a different VPN provider, update the `gluetun` environment variables in [
 | `SEEDBOX_USER` | Seedbox SSH username |
 | `SEEDBOX_PASS` | Seedbox SSH password |
 | `SEEDBOX_REMOTE_PATH` | Remote path to completed downloads |
+| `SEEDBOX_MIN_AGE` | Minimum age before copying from seedbox (default: `1m`; increase to `24h`/`48h`/`7d` to let torrents seed) |
+
+> **Source files are preserved.** The `rclone-seedbox` service only copies files from the seedbox to local `/downloads/complete/`. It never deletes files from the seedbox.
+>
+> **Avoid hit-and-run warnings.** If your seedbox provider reports files as leeched or warns "1 file to seed," the torrent was likely removed from the seedbox before it could seed enough. Two things prevent this:
+> 1. Increase `SEEDBOX_MIN_AGE` so rclone waits (e.g., `48h`) before copying the file locally and triggering a `*arr` import.
+> 2. In Sonarr/Radarr, disable **"Remove from {app}"** / **"Remove on import"** for the seedbox download client, or set it to remove only after the seedbox's required ratio/seed time is met.
 
 #### Credentials
 

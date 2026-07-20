@@ -1,20 +1,34 @@
 #!/bin/sh
 
+# This script only COPIES files from the seedbox to local storage.
+# It does NOT delete, move, or modify source files on the seedbox.
+# If shows/movies are disappearing from the seedbox, check your *arr
+# download client settings (Sonarr/Radarr) for "Remove from {app}"
+# or qBittorrent's "Delete .torrent + files" option on the seedbox.
+
 LOCAL_PATH="/downloads/complete/"
 INTERVAL=120
 SEEDBOX_PORT=${SEEDBOX_PORT:-22}
+# Minimum age a remote file must reach before rclone copies it locally.
+# Increase this to let torrents seed on the seedbox before you pull them.
+# Example: 24h, 48h, 7d. See rclone docs for accepted suffixes.
+SEEDBOX_MIN_AGE=${SEEDBOX_MIN_AGE:-1m}
 
 echo "Starting seedbox sync: ${SEEDBOX_HOST}:${SEEDBOX_REMOTE_PATH} -> ${LOCAL_PATH}"
 echo "Sync interval: ${INTERVAL}s"
+echo "Minimum seedbox file age before copy: ${SEEDBOX_MIN_AGE}"
+echo "NOTE: rclone copy does not delete source files on the seedbox."
 
 while true; do
+  # rclone copy: copies new/changed files from seedbox to local.
+  # It never deletes files on the seedbox (source) or local (destination).
   rclone copy ":sftp:${SEEDBOX_REMOTE_PATH}" "$LOCAL_PATH" \
     --sftp-host "${SEEDBOX_HOST}" \
     --sftp-port "${SEEDBOX_PORT}" \
     --sftp-user "${SEEDBOX_USER}" \
     --sftp-pass "$(rclone obscure "${SEEDBOX_PASS}")" \
     --transfers 2 \
-    --min-age 1m \
+    --min-age "${SEEDBOX_MIN_AGE}" \
     --log-level INFO
 
   # Extract archives in book downloads (zip->rar->epub pattern from scene releases)

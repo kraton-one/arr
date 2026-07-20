@@ -230,6 +230,9 @@ services:
       - SEEDBOX_USER=${SEEDBOX_USER}
       - SEEDBOX_PASS=${SEEDBOX_PASS}
       - SEEDBOX_REMOTE_PATH=${SEEDBOX_REMOTE_PATH}
+      # Increase to give torrents time to seed before pulling them locally.
+      # Example: 24h, 48h, 7d. Default 1m keeps old behavior.
+      - SEEDBOX_MIN_AGE=${SEEDBOX_MIN_AGE:-1m}
     volumes:
       - ${MEDIA_ROOT}/downloads:/downloads
       - ./scripts/seedbox-sync.sh:/scripts/seedbox-sync.sh:ro
