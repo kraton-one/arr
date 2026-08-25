@@ -207,7 +207,7 @@ services:
       - ${MEDIA_ROOT}/library/books:/books
       - ${MEDIA_ROOT}/library/audiobooks:/audiobooks
       - ${MEDIA_ROOT}/downloads:/downloads
-      - ./init-scripts/fix-bindaddress.sh:/custom-cont-init.d/fix-bindaddress.sh:ro
+      - ./init-scripts/fix-lazylibrarian.sh:/custom-cont-init.d/fix-lazylibrarian.sh:ro
     network_mode: "service:gluetun"
     depends_on:
       gluetun:
