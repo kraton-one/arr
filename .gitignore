@@ -1,4 +1,5 @@
 # Environment files with secrets
+.omo/*
 .env
 .claude/
 .codex/

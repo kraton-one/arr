@@ -27,6 +27,28 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - Library search endpoint is `GET /api/libraries/{id}/search?q=...`
   (NOT `/api/search/library` — that 404s).
 
+## Task 6 (2026-08-25) — Web-search title resolution gotchas
+
+- Exa MCP has a free-tier rate limit. Firing 11 parallel searches at once triggered
+  8 rate-limit errors; spacing queries out with `sleep 30` between individual calls
+  worked around it. For batch lookups, do one at a time and expect retries.
+- When the user already owns a book but it's tagged with the wrong series sequence
+  in ABS (e.g., *Twelve Months* tagged as Dresden Files `#23` when it's actually
+  `#18`), the gap report produces a false-positive MISSING entry. The fix is a
+  metadata PATCH, not a purchase. Always sanity-check a MISSING entry against the
+  official series list before adding it to a shopping list.
+- Wikipedia is a reliable single source for "Book #N of series X" — the infobox
+  states it plainly. Penguin Random House / Hachette / Barnes & Noble also all
+  label book order in their product metadata. Use the publisher page when you
+  need an authoritative number, Wikipedia when you need the full series list.
+- For upcoming/unannounced books in an ongoing series (e.g., Dresden #20–#22),
+  search for `"series name" book N release date` to distinguish "not yet titled"
+  from "titled but not published" (e.g., Dresden #19 = Mirror Mirror, announced
+  Aug 2026, 42% written). This changes the actionable item from "buy" to "wait."
+- Always re-verify titles inherited from prior task notepads against a live web
+  search, even when confident — search is one cheap call, and a stale title in a
+  shopping list is a bad user experience.
+
 ## Task 5 (2026-08-25) — Gap report generation gotchas
 
 - `GET /api/libraries/{id}/series?limit=100&page=N` returns

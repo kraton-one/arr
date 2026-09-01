@@ -334,6 +334,7 @@ services:
       - /dev/dri:/dev/dri
     group_add:
       - "107"
+    shm_size: '2gb'
     networks:
       arr_network:
     restart: unless-stopped
